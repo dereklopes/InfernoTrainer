@@ -1,7 +1,15 @@
 "use strict";
 
-import { Assets, RangedWeapon, Unit, AttackBonuses, ProjectileOptions, Player, Mob, Sound, UnitBonuses, GLTFModel, EntityNames } from "@supalosa/oldschool-trainer-sdk";
-
+import { EntityName } from "../../../../sdk/EntityName";
+import { AttackBonuses } from "../../../../sdk/gear/Weapon";
+import { Mob } from "../../../../sdk/Mob";
+import { Player } from "../../../../sdk/Player";
+import { GLTFModel } from "../../../../sdk/rendering/GLTFModel";
+import { Unit, UnitBonuses } from "../../../../sdk/Unit";
+import { Assets } from "../../../../sdk/utils/Assets";
+import { Sound } from "../../../../sdk/utils/SoundCache";
+import { ProjectileOptions } from "../../../../sdk/weapons/Projectile";
+import { RangedWeapon } from "../../../../sdk/weapons/RangedWeapon";
 import BatImage from "../../assets/images/bat.png";
 import BatSound from "../../assets/sounds/bat.ogg";
 import { InfernoMobDeathStore } from "../InfernoMobDeathStore";
@@ -17,8 +25,8 @@ class JalMejRahWeapon extends RangedWeapon {
   }
 }
 export class JalMejRah extends Mob {
-  mobName() {
-    return EntityNames.JAL_MEJ_RAJ;
+  mobName(): EntityName {
+    return EntityName.JAL_MEJ_RAJ;
   }
 
   get combatLevel() {
@@ -34,7 +42,7 @@ export class JalMejRah extends Mob {
     this.stunned = 1;
 
     this.weapons = {
-      range: new JalMejRahWeapon({ sound: new Sound(BatSound, 0.5) }),
+      range: new JalMejRahWeapon(),
     };
 
     // non boosted numbers
@@ -91,6 +99,10 @@ export class JalMejRah extends Mob {
     return BatImage;
   }
 
+  get sound() {
+    return new Sound(BatSound, 0.75);
+  }
+
   attackStyleForNewAttack() {
     return "range";
   }
@@ -100,14 +112,10 @@ export class JalMejRah extends Mob {
   }
 
   create3dModel() {
-    return GLTFModel.forRenderable(this, BatModel);
+    return GLTFModel.forRenderable(this, BatModel, 0.0075);
   }
 
   override get attackAnimationId() {
     return 1;
-  }
-
-  override get deathAnimationId() {
-    return 3;
   }
 }

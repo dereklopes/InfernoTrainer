@@ -1,12 +1,22 @@
-import { Assets, Mob, ImageLoader, Location, Projectile, Random, LineOfSightMask, Region, UnitOptions, UnitBonuses, DelayedAction, Unit, CollisionType, Settings, GLTFModel, EntityNames } from "@supalosa/oldschool-trainer-sdk";
-import { UnitStats } from "@supalosa/oldschool-trainer-sdk/lib/src/sdk/UnitStats";
+import { CollisionType } from "../../../sdk/Collision";
+import { EntityName } from "../../../sdk/EntityName";
+import { Settings } from "../../../sdk/Settings";
+import { Projectile } from "../../../sdk/weapons/Projectile";
+import { Unit, UnitBonuses, UnitOptions, UnitStats } from "../../../sdk/Unit";
 
+import MissSplat from "../../../assets/images/hitsplats/miss.png";
+import DamageSplat from "../../../assets/images/hitsplats/damage.png";
+import { ImageLoader } from "../../../sdk/utils/ImageLoader";
+import { Location } from "../../../sdk/Location";
 import { find } from "lodash";
+import { LineOfSightMask } from "../../../sdk/LineOfSight";
+import { DelayedAction } from "../../../sdk/DelayedAction";
 import { JalXil } from "./mobs/JalXil";
-
-
-const MissSplat = Assets.getAssetUrl("assets/images/hitsplats/miss.png");
-const DamageSplat = Assets.getAssetUrl("assets/images/hitsplats/damage.png");
+import { Mob } from "../../../sdk/Mob";
+import { Region } from "../../../sdk/Region";
+import { Random } from "../../../sdk/Random";
+import { Assets } from "../../../sdk/utils/Assets";
+import { GLTFModel } from "../../../sdk/rendering/GLTFModel";
 
 const ShieldModel = Assets.getAssetUrl("models/7707_33036.glb");
 
@@ -81,30 +91,24 @@ export class ZukShield extends Mob {
   }
 
   dead() {
-    super.dead();
     this.dying = 3;
     DelayedAction.registerDelayedAction(
       new DelayedAction(() => {
         this.region.removeMob(this);
         const ranger = find(this.region.mobs, (mob: Mob) => {
-          return mob.mobName() === EntityNames.JAL_XIL;
+          return mob.mobName() === EntityName.JAL_XIL;
         }) as JalXil;
         if (ranger) {
           ranger.setAggro(this.aggro as Unit);
         }
         const mager = find(this.region.mobs, (mob: Mob) => {
-          return mob.mobName() === EntityNames.JAL_ZEK;
+          return mob.mobName() === EntityName.JAL_ZEK;
         }) as JalXil;
         if (mager) {
           mager.setAggro(this.aggro as Unit);
         }
       }, 2),
     );
-  }
-
-  override visible() {
-    // always visible, even during countdown
-    return true;
   }
 
   get drawOutline() {
@@ -114,8 +118,8 @@ export class ZukShield extends Mob {
   contextActions() {
     return [];
   }
-  mobName() {
-    return EntityNames.INFERNO_SHIELD;
+  mobName(): EntityName {
+    return EntityName.INFERNO_SHIELD;
   }
 
   get selectable() {
@@ -167,8 +171,8 @@ export class ZukShield extends Mob {
     return CollisionType.NONE;
   }
 
-  entityName() {
-    return EntityNames.INFERNO_SHIELD;
+  entityName(): EntityName {
+    return EntityName.INFERNO_SHIELD;
   }
 
   canMove() {
@@ -195,14 +199,13 @@ export class ZukShield extends Mob {
   }
 
   create3dModel() {
-    return GLTFModel.forRenderable(this, ShieldModel);
+    return GLTFModel.forRenderable(this, ShieldModel, 0.0075);
   }
-
   get animationIndex() {
-    return 0; // idle
-  }
-
-  override get deathAnimationId() {
-    return 1;
+    if (this.dying >= 0) {
+      return 1; // dying
+    } else {
+      return 0; // idle
+    }
   }
 }

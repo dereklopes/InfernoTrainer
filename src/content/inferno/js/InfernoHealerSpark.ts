@@ -1,10 +1,21 @@
 "use strict";
 
-import { Assets, Weapon, Unit, AttackBonuses, ProjectileOptions, Random, Projectile, Entity, Region, GLTFModel, Location, CollisionType, LineOfSightMask, Pathing, Viewport, SoundCache, Sound, Collision, Settings, Trainer } from "@supalosa/oldschool-trainer-sdk";
+import { Settings } from "../../../sdk/Settings";
+import { Unit } from "../../../sdk/Unit";
+import { Projectile, ProjectileOptions } from "../../../sdk/weapons/Projectile";
+import { Location } from "../../../sdk/Location";
+import { Entity } from "../../../sdk/Entity";
+import { Collision, CollisionType } from "../../../sdk/Collision";
+import { Weapon, AttackBonuses } from "../../../sdk/gear/Weapon";
+import { LineOfSightMask } from "../../../sdk/LineOfSight";
+import { Random } from "../../../sdk/Random";
+import { Region } from "../../../sdk/Region";
+import { TileMarkerModel } from "../../../sdk/rendering/TileMarkerModel";
+import { Sound, SoundCache } from "../../../sdk/utils/SoundCache";
 
 import FireWaveHit from "../assets/sounds/firewave_hit_163.ogg";
-
-const Splat = Assets.getAssetUrl("models/tekton_meteor_splat.glb");
+import { Viewport } from "../../../sdk/Viewport";
+import { Pathing } from "../../../sdk/Pathing";
 
 class InfernoSparkWeapon extends Weapon {
   calculateHitDelay(distance: number) {
@@ -28,7 +39,7 @@ export class InfernoHealerSpark extends Entity {
   to: Unit;
   weapon: InfernoSparkWeapon = new InfernoSparkWeapon();
 
-  age = 0;
+  hasSparked = false;
 
   constructor(region: Region, location: Location, from: Unit, to: Unit) {
     super(region, location);
@@ -37,11 +48,7 @@ export class InfernoHealerSpark extends Entity {
   }
 
   create3dModel() {
-    return GLTFModel.forRenderable(this, Splat, { verticalOffset: -1 });
-  }
-
-  get animationIndex() {
-    return 0;
+    return TileMarkerModel.forRenderable(this);
   }
 
   get color() {
@@ -60,22 +67,16 @@ export class InfernoHealerSpark extends Entity {
     return this.dying === 0;
   }
 
-  get drawOutline() {
-    return false;
-  }
-
-  visible() {
-    return this.dying < 0 && this.age >= 1;
-  }
-
   tick() {
-    ++this.age;
-    if (this.age == 1) {
+    if (this.dying === -1) {
+      this.dying = 0;
+    }
+    if (!this.hasSparked) {
       let attemptedVolume =
         1 /
         Pathing.dist(
-          Trainer.player.location.x,
-          Trainer.player.location.y,
+          Viewport.viewport.player.location.x,
+          Viewport.viewport.player.location.y,
           this.location.x,
           this.location.y,
         );
@@ -84,12 +85,9 @@ export class InfernoHealerSpark extends Entity {
       if (
         Collision.collisionMath(this.location.x - 1, this.location.y + 1, 3, this.to.location.x, this.to.location.y, 1)
       ) {
-        this.weapon.attack(this.from, this.to as Unit, {});
+        this.weapon.attack(this.from, this.from.aggro as Unit, {});
       }
-    } else if (this.age == 3) {
-      this.playAnimation(0).then(() => {
-        this.dying = 0;
-      })
+      this.hasSparked = true;
     }
   }
 

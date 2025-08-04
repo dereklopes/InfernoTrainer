@@ -1,45 +1,30 @@
 "use strict";
 
-import {
-  Assets,
-  Mob,
-  Projectile,
-  MeleeWeapon,
-  MagicWeapon,
-  Sound,
-  UnitBonuses,
-  Collision,
-  AttackIndicators,
-  Random,
-  Viewport,
-  GLTFModel,
-  EntityNames,
-  Trainer,
-  Model,
-} from "@supalosa/oldschool-trainer-sdk";
-
-import { InfernoMobDeathStore } from "../InfernoMobDeathStore";
-import { InfernoRegion } from "../InfernoRegion";
-
+import { MagicWeapon } from "../../../../sdk/weapons/MagicWeapon";
+import { MeleeWeapon } from "../../../../sdk/weapons/MeleeWeapon";
+import { Mob, AttackIndicators } from "../../../../sdk/Mob";
 import MagerImage from "../../assets/images/mager.png";
-import MagerSound from "../../assets/sounds/mage_ranger_598.ogg";
-import { JalZekModelWithLight } from "../JalZekModelWithLight";
+import MagerSound from "../../assets/sounds/mager.ogg";
+import { InfernoMobDeathStore } from "../InfernoMobDeathStore";
+import { UnitBonuses } from "../../../../sdk/Unit";
+import { Collision } from "../../../../sdk/Collision";
+import { EntityName } from "../../../../sdk/EntityName";
+import { Projectile } from "../../../../sdk/weapons/Projectile";
+import { InfernoRegion } from "../InfernoRegion";
+import { Random } from "../../../../sdk/Random";
+import { Sound } from "../../../../sdk/utils/SoundCache";
+import HitSound from "../../../../assets/sounds/dragon_hit_410.ogg";
 
-const HitSound = Assets.getAssetUrl("assets/sounds/dragon_hit_410.ogg");
+import { GLTFModel } from "../../../../sdk/rendering/GLTFModel";
+import { Assets } from "../../../../sdk/utils/Assets";
 
 export const MagerModel = Assets.getAssetUrl("models/7699_33000.glb");
-export const MageProjectileModel = Assets.getAssetUrl("models/mage_projectile.glb");
 
 export class JalZek extends Mob {
   shouldRespawnMobs: boolean;
-  isFlickering = false;
-  // flicker only the tick before the attack animation happns
-  flickerDurationTicks = 1;
-  flickerTicksRemaining = 0;
-  extendedGltfModelInstance: JalZekModelWithLight | null = null;
 
-  mobName() {
-    return EntityNames.JAL_ZEK;
+  mobName(): EntityName {
+    return EntityName.JAL_ZEK;
   }
 
   shouldChangeAggro(projectile: Projectile) {
@@ -53,10 +38,6 @@ export class JalZek extends Mob {
   dead() {
     super.dead();
     InfernoMobDeathStore.npcDied(this);
-    if (this.isFlickering) {
-      this.isFlickering = false;
-      this.updateUnderglowVisuals();
-    }
   }
 
   setStats() {
@@ -67,13 +48,7 @@ export class JalZek extends Mob {
 
     this.weapons = {
       stab: new MeleeWeapon(),
-      magic: new MagicWeapon({
-        model: MageProjectileModel,
-        modelScale: 1 / 128,
-        visualDelayTicks: 2,
-        visualHitEarlyTicks: -1, // hits after landing
-        sound: new Sound(MagerSound, 0.1),
-      }),
+      magic: new MagicWeapon(),
     };
 
     // non boosted numbers
@@ -131,6 +106,10 @@ export class JalZek extends Mob {
     return MagerImage;
   }
 
+  get sound() {
+    return new Sound(MagerSound);
+  }
+
   hitSound(damaged) {
     return new Sound(HitSound, 0.1);
   }
@@ -169,69 +148,15 @@ export class JalZek extends Mob {
     return { x: 21, y: 22 };
   }
 
-  create3dModel() {
-    if (!this.extendedGltfModelInstance) {
-      this.extendedGltfModelInstance = new JalZekModelWithLight(this, MagerModel);
-    }
-    return this.extendedGltfModelInstance;
-  }
-
-  updateUnderglowVisuals() {
-    if (this.extendedGltfModelInstance) {
-      this.extendedGltfModelInstance.setFlickerVisualState(this.isFlickering);
-    }
-  }
-
-  attackStep() {
-    super.attackStep();
-
-    if (this.isFlickering) {
-      this.flickerTicksRemaining--;
-      // double flicker on the flicker tick
-      this.extendedGltfModelInstance?.setFlickerVisualState(true);
-      if (this.flickerTicksRemaining <= 0) {
-        this.isFlickering = false;
-        // reset to normal
-        this.extendedGltfModelInstance?.setFlickerVisualState(false);
-        // Set attack style before attacking
-        this.attackStyle = this.attackStyleForNewAttack();
-        this.attackFeedback = AttackIndicators.NONE;
-        if (Random.get() < 0.1 && !this.shouldRespawnMobs) {
-          const mobToResurrect = InfernoMobDeathStore.selectMobToResurect(this.region);
-          if (!mobToResurrect) {
-            this.attack() && this.didAttack();
-          } else {
-            // Set to 50% health
-            mobToResurrect.currentStats.hitpoint = Math.floor(mobToResurrect.stats.hitpoint / 2);
-            mobToResurrect.dying = -1;
-            mobToResurrect.attackDelay = mobToResurrect.attackSpeed;
-
-            mobToResurrect.setLocation(this.respawnLocation(mobToResurrect));
-            mobToResurrect.playAnimation(mobToResurrect.idlePoseId);
-            mobToResurrect.cancelDeath();
-            mobToResurrect.aggro = Trainer.player;
-
-            mobToResurrect.perceivedLocation = mobToResurrect.location;
-            this.region.addMob(mobToResurrect);
-            // (15, 10) to  (21 , 22
-            this.attackDelay = 8;
-            this.playAnimation(3);
-          }
-        } else {
-          this.attack() && this.didAttack();
-        }
-        this.attackDelay = this.attackSpeed;
-      }
-      return;
-    }
-    this.attackIfPossible();
-  }
-
   attackIfPossible() {
+    this.attackStyle = this.attackStyleForNewAttack();
+
+    this.attackFeedback = AttackIndicators.NONE;
+
     this.hadLOS = this.hasLOS;
     this.setHasLOS();
 
-    if (!this.aggro || this.stunned > 0 || this.frozen > 0 || this.attackDelay > 0 || this.isDying()) {
+    if (this.canAttack() === false) {
       return;
     }
 
@@ -244,23 +169,36 @@ export class JalZek extends Mob {
       1,
     );
 
-    if (!isUnderAggro && this.hasLOS) {
-      // start flicker BEFORE initiating attack
-      this.isFlickering = true;
-      this.flickerTicksRemaining = this.flickerDurationTicks;
-      //resetting visual state
-      this.extendedGltfModelInstance?.setFlickerVisualState(false);
-      // wait for flicker to finish before attacking
-      this.attackDelay = this.flickerDurationTicks;
-      return;
+    if (!isUnderAggro && this.hasLOS && this.attackDelay <= 0) {
+      if (Random.get() < 0.1 && !this.shouldRespawnMobs) {
+        const mobToResurrect = InfernoMobDeathStore.selectMobToResurect(this.region);
+        if (!mobToResurrect) {
+          this.attack() && this.didAttack();
+        } else {
+          // Set to 50% health
+          mobToResurrect.currentStats.hitpoint = Math.floor(mobToResurrect.stats.hitpoint / 2);
+          mobToResurrect.dying = -1;
+          mobToResurrect.attackDelay = mobToResurrect.attackSpeed;
+
+          mobToResurrect.setLocation(this.respawnLocation(mobToResurrect));
+
+          mobToResurrect.perceivedLocation = mobToResurrect.location;
+          this.region.addMob(mobToResurrect);
+          // (15, 10) to  (21 , 22)
+          this.attackDelay = 8;
+          this.playAnimation(3);
+        }
+      } else {
+        this.attack() && this.didAttack();
+      }
     }
+  }
+
+  create3dModel() {
+    return GLTFModel.forRenderable(this, MagerModel, 0.0075);
   }
 
   override get attackAnimationId() {
     return 2;
-  }
-
-  override get deathAnimationId() {
-    return 5;
   }
 }

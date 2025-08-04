@@ -1,10 +1,19 @@
 "use strict";
 
-import { Assets, Mob, EntityNames, MeleeWeapon, Sound, UnitBonuses, Location, Random, Collision, UnitTypes, Player, GLTFModel } from "@supalosa/oldschool-trainer-sdk";
-
+import { MeleeWeapon } from "../../../../sdk/weapons/MeleeWeapon";
+import { Mob } from "../../../../sdk/Mob";
 import MeleerImage from "../../assets/images/meleer.png";
 import MeleerSound from "../../assets/sounds/meleer.ogg";
 import { InfernoMobDeathStore } from "../InfernoMobDeathStore";
+import { UnitBonuses, UnitTypes } from "../../../../sdk/Unit";
+import { Collision } from "../../../../sdk/Collision";
+import { EntityName } from "../../../../sdk/EntityName";
+import { Random } from "../../../../sdk/Random";
+import { Player } from "../../../../sdk/Player";
+import { Sound } from "../../../../sdk/utils/SoundCache";
+import { GLTFModel } from "../../../../sdk/rendering/GLTFModel";
+import { Assets } from "../../../../sdk/utils/Assets";
+import { Location } from "../../../../sdk/Location";
 
 const MeleerModel = Assets.getAssetUrl("models/7697_33010.glb");
 
@@ -13,8 +22,8 @@ export class JalImKot extends Mob {
   private digLocation: Location = { x: 0, y: 0 };
   private digCount = 0;
 
-  mobName() {
-    return EntityNames.JAL_IM_KOT;
+  mobName(): EntityName {
+    return EntityName.JAL_IM_KOT;
   }
 
   get combatLevel() {
@@ -30,9 +39,7 @@ export class JalImKot extends Mob {
     this.stunned = 1;
 
     this.weapons = {
-      slash: new MeleeWeapon({
-        sound: new Sound(MeleerSound, 0.6)
-      }),
+      slash: new MeleeWeapon(),
     };
 
     // non boosted numbers
@@ -93,6 +100,10 @@ export class JalImKot extends Mob {
     return MeleerImage;
   }
 
+  get sound() {
+    return new Sound(MeleerSound, 0.75);
+  }
+
   get color() {
     return "#ACFF5633";
   }
@@ -116,9 +127,6 @@ export class JalImKot extends Mob {
   }
 
   startDig() {
-    if (!this.aggro) {
-      return;
-    }
     this.freeze(6);
     this.digSequenceTime = 6;
     this.digCount++;
@@ -162,9 +170,7 @@ export class JalImKot extends Mob {
   endDig() {
     if (this.aggro.type === UnitTypes.PLAYER) {
       const player = this.aggro as Player;
-      if (player.aggro === this) {
-        player.interruptCombat();
-      }
+      player.interruptCombat();
     }
     this.attackDelay = 6;
     this.freeze(2);
@@ -173,18 +179,10 @@ export class JalImKot extends Mob {
   }
 
   create3dModel() {
-    return GLTFModel.forRenderable(this, MeleerModel);
-  }
-
-  get deathAnimationLength() {
-    return 6;
+    return GLTFModel.forRenderable(this, MeleerModel, 0.0075);
   }
 
   get attackAnimationId() {
     return 2;
-  }
-
-  override get deathAnimationId() {
-    return 6;
   }
 }

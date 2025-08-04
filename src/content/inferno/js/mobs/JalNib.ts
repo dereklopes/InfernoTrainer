@@ -1,9 +1,22 @@
 "use strict";
 
-import { Assets, MeleeWeapon, Unit, AttackBonuses, ProjectileOptions, Random, Projectile, Location, Mob, Region, UnitOptions, Sound, UnitBonuses, Collision, AttackIndicators, Pathing, GLTFModel, EntityNames, LocationUtils } from "@supalosa/oldschool-trainer-sdk";
+import { MeleeWeapon } from "../../../../sdk/weapons/MeleeWeapon";
+import { AttackIndicators, Mob } from "../../../../sdk/Mob";
 
 import NibblerImage from "../../assets/images/nib.png";
 import NibblerSound from "../../assets/sounds/meleer.ogg";
+import { Pathing } from "../../../../sdk/Pathing";
+import { Projectile, ProjectileOptions } from "../../../../sdk/weapons/Projectile";
+import { Unit, UnitBonuses, UnitOptions } from "../../../../sdk/Unit";
+import { AttackBonuses } from "../../../../sdk/gear/Weapon";
+import { Collision } from "../../../../sdk/Collision";
+import { Location } from "../../../../sdk/Location";
+import { EntityName } from "../../../../sdk/EntityName";
+import { Random } from "../../../../sdk/Random";
+import { Region } from "../../../../sdk/Region";
+import { Sound } from "../../../../sdk/utils/SoundCache";
+import { GLTFModel } from "../../../../sdk/rendering/GLTFModel";
+import { Assets } from "../../../../sdk/utils/Assets";
 
 const NibblerModel = Assets.getAssetUrl("models/7691_33005.glb");
 
@@ -11,10 +24,7 @@ class NibblerWeapon extends MeleeWeapon {
   attack(from: Unit, to: Unit, bonuses: AttackBonuses, options: ProjectileOptions = {}): boolean {
     const damage = Math.floor(Random.get() * 5);
     this.damage = damage;
-    to.addProjectile(new Projectile(this, this.damage, from, to, "crush", {
-      ...this.projectileOptions,
-      ...options
-    }));
+    to.addProjectile(new Projectile(this, this.damage, from, to, "crush", options));
     return true;
   }
 }
@@ -25,8 +35,8 @@ export class JalNib extends Mob {
     this.autoRetaliate = false;
   }
 
-  mobName() {
-    return EntityNames.JAL_NIB;
+  mobName(): EntityName {
+    return EntityName.JAL_NIB;
   }
 
   get combatLevel() {
@@ -37,9 +47,7 @@ export class JalNib extends Mob {
     this.stunned = 1;
     this.autoRetaliate = false;
     this.weapons = {
-      crush: new NibblerWeapon({
-        sound: new Sound(NibblerSound, 0.2)
-      }),
+      crush: new NibblerWeapon(),
     };
 
     // non boosted numbers
@@ -101,6 +109,10 @@ export class JalNib extends Mob {
     return NibblerImage;
   }
 
+  get sound() {
+    return new Sound(NibblerSound, 0.15);
+  }
+
   attackStyleForNewAttack() {
     return "crush";
   }
@@ -128,7 +140,7 @@ export class JalNib extends Mob {
     );
     this.attackFeedback = AttackIndicators.NONE;
 
-    const aggroPoint = LocationUtils.closestPointTo(this.location.x, this.location.y, this.aggro);
+    const aggroPoint = Pathing.closestPointTo(this.location.x, this.location.y, this.aggro);
     if (
       !isUnderAggro &&
       Pathing.dist(this.location.x, this.location.y, aggroPoint.x, aggroPoint.y) <= this.attackRange &&
@@ -139,14 +151,10 @@ export class JalNib extends Mob {
   }
 
   create3dModel() {
-    return GLTFModel.forRenderable(this, NibblerModel);
+    return GLTFModel.forRenderable(this, NibblerModel, 0.0075);
   }
 
   override get attackAnimationId() {
     return 2;
-  }
-
-  override get deathAnimationId() {
-    return 4;
   }
 }
